@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "1", "label": "Volume of distribution", "shape": "dot", "size": 10, "title": "Volume of distribution"}, {"color": "#97c2fc", "id": "4", "label": "distribution of drugs", "shape": "dot", "size": 10, "title": "distribution of drugs"}, {"color": "#97c2fc", "id": "5", "label": "factors that influence", "shape": "dot", "size": 10, "title": "factors that influence"}, {"color": "#97c2fc", "id": "13", "label": "pharmacokinetic concept", "shape": "dot", "size": 10, "title": "pharmacokinetic concept"}, {"color": "#97c2fc", "id": "15", "label": "measured concentration", "shape": "dot", "size": 10, "title": "measured concentration"}, {"color": "#97c2fc", "id": "18", "label": "loading dose calculations", "shape": "dot", "size": 10, "title": "loading dose calculations"}, {"color": "#97c2fc", "id": "20", "label": "drug overdose", "shape": "dot", "size": 10, "title": "drug overdose"}, {"color": "#97c2fc", "id": "10", "label": "sensible and memorable definition", "shape": "dot", "size": 10, "title": "sensible and memorable definition"}, {"color": "#97c2fc", "id": "2", "label": "2023 CICM Primary Syllabus", "shape": "dot", "size": 10, "title": "2023 CICM Primary Syllabus"}, {"color": "#97c2fc", "id": "3", "label": "exam candidate", "shape": "dot", "size": 10, "title": "exam candidate"}, {"color": "#97c2fc", "id": "6", "label": "past papers", "shape": "dot", "size": 10, "title": "past papers"}, {"color": "#97c2fc", "id": "7", "label": "define volume of distribution", "shape": "dot", "size": 10, "title": "define volume of distribution"}, {"color": "#97c2fc", "id": "8", "label": "describe factors that influence it", "shape": "dot", "size": 10, "title": "describe factors that influence it"}, {"color": "#97c2fc", "id": "9", "label": "methods of its measurement", "shape": "dot", "size": 10, "title": "methods of its measurement"}, {"color": "#97c2fc", "id": "11", "label": "patient factors", "shape": "dot", "size": 10, "title": "patient factors"}, {"color": "#97c2fc", "id": "32", "label": "major determinants of Vd", "shape": "dot", "size": 10, "title": "major determinants of Vd"}, {"color": "#97c2fc", "id": "40", "label": "age", "shape": "dot", "size": 10, "title": "age"}, {"color": "#97c2fc", "id": "41", "label": "gender", "shape": "dot", "size": 10, "title": "gender"}, {"color": "#97c2fc", "id": "42", "label": "body muscle/fat proportion", "shape": "dot", "size": 10, "title": "body muscle/fat proportion"}, {"color": "#97c2fc", "id": "43", "label": "level of hydration", "shape": "dot", "size": 10, "title": "level of hydration"}, {"color": "#97c2fc", "id": "44", "label": "water distribution", "shape": "dot", "size": 10, "title": "water distribution"}, {"color": "#97c2fc", "id": "45", "label": "oedema", "shape": "dot", "size": 10, "title": "oedema"}, {"color": "#97c2fc", "id": "46", "label": "effusions", "shape": "dot", "size": 10, "title": "effusions"}, {"color": "#97c2fc", "id": "47", "label": "ascites", "shape": "dot", "size": 10, "title": "ascites"}, {"color": "#97c2fc", "id": "48", "label": "pregnancy", "shape": "dot", "size": 10, "title": "pregnancy"}, {"color": "#97c2fc", "id": "21", "label": "Vd", "shape": "dot", "size": 10, "title": "Vd"}, {"color": "#97c2fc", "id": "22", "label": "apparent volume", "shape": "dot", "size": 10, "title": "apparent volume"}, {"color": "#97c2fc", "id": "23", "label": "observed plasma concentration", "shape": "dot", "size": 10, "title": "observed plasma concentration"}, {"color": "#97c2fc", "id": "24", "label": "calculate loading doses", "shape": "dot", "size": 10, "title": "calculate loading doses"}, {"color": "#97c2fc", "id": "25", "label": "maintenance dose", "shape": "dot", "size": 10, "title": "maintenance dose"}, {"color": "#97c2fc", "id": "26", "label": "plasma concentration", "shape": "dot", "size": 10, "title": "plasma concentration"}, {"color": "#97c2fc", "id": "33", "label": "drug properties", "shape": "dot", "size": 10, "title": "drug properties"}, {"color": "#97c2fc", "id": "34", "label": "protein binding", "shape": "dot", "size": 10, "title": "protein binding"}, {"color": "#97c2fc", "id": "35", "label": "tissue binding", "shape": "dot", "size": 10, "title": "tissue binding"}, {"color": "#97c2fc", "id": "36", "label": "molecule size", "shape": "dot", "size": 10, "title": "molecule size"}, {"color": "#97c2fc", "id": "37", "label": "charge", "shape": "dot", "size": 10, "title": "charge"}, {"color": "#97c2fc", "id": "38", "label": "pKa", "shape": "dot", "size": 10, "title": "pKa"}, {"color": "#97c2fc", "id": "39", "label": "lipid/water partition coefficient", "shape": "dot", "size": 10, "title": "lipid/water partition coefficient"}, {"color": "#97c2fc", "id": "49", "label": "extracorporeal sites of distribution", "shape": "dot", "size": 10, "title": "extracorporeal sites of distribution"}, {"color": "#97c2fc", "id": "50", "label": "circuit", "shape": "dot", "size": 10, "title": "circuit"}, {"color": "#97c2fc", "id": "51", "label": "filters", "shape": "dot", "size": 10, "title": "filters"}, {"color": "#97c2fc", "id": "52", "label": "oxygenator", "shape": "dot", "size": 10, "title": "oxygenator"}, {"color": "#97c2fc", "id": "12", "label": "drug factors", "shape": "dot", "size": 10, "title": "drug factors"}, {"color": "#97c2fc", "id": "14", "label": "distribution of drugs in the body", "shape": "dot", "size": 10, "title": "distribution of drugs in the body"}, {"color": "#97c2fc", "id": "16", "label": "theoretical volume", "shape": "dot", "size": 10, "title": "theoretical volume"}, {"color": "#97c2fc", "id": "17", "label": "total body volume", "shape": "dot", "size": 10, "title": "total body volume"}, {"color": "#97c2fc", "id": "19", "label": "drug cleared by dialysis", "shape": "dot", "size": 10, "title": "drug cleared by dialysis"}, {"color": "#97c2fc", "id": "27", "label": "Vinitial", "shape": "dot", "size": 10, "title": "Vinitial"}, {"color": "#97c2fc", "id": "28", "label": "Vextrap", "shape": "dot", "size": 10, "title": "Vextrap"}, {"color": "#97c2fc", "id": "29", "label": "Varea", "shape": "dot", "size": 10, "title": "Varea"}, {"color": "#97c2fc", "id": "30", "label": "Vss", "shape": "dot", "size": 10, "title": "Vss"}, {"color": "#97c2fc", "id": "31", "label": "steady state", "shape": "dot", "size": 10, "title": "steady state"}]);
+                  edges = new vis.DataSet([{"from": "1", "label": "describe", "to": "4", "width": 1}, {"from": "1", "label": "influenced by", "to": "5", "width": 1}, {"from": "1", "label": "is a", "to": "13", "width": 1}, {"from": "1", "label": "relative to", "to": "15", "width": 1}, {"from": "1", "label": "used in", "to": "18", "width": 1}, {"from": "1", "label": "estimate", "to": "20", "width": 1}, {"from": "1", "label": "defines", "to": "10", "width": 1}, {"from": "2", "label": "expects", "to": "3", "width": 1}, {"from": "4", "label": "distribute", "to": "4", "width": 1}, {"from": "6", "label": "asked", "to": "7", "width": 1}, {"from": "6", "label": "asked", "to": "8", "width": 1}, {"from": "6", "label": "asks for", "to": "9", "width": 1}, {"from": "11", "label": "affected by", "to": "32", "width": 1}, {"from": "11", "label": "includes", "to": "40", "width": 1}, {"from": "11", "label": "includes", "to": "41", "width": 1}, {"from": "11", "label": "includes", "to": "42", "width": 1}, {"from": "11", "label": "includes", "to": "43", "width": 1}, {"from": "11", "label": "includes", "to": "44", "width": 1}, {"from": "11", "label": "includes", "to": "45", "width": 1}, {"from": "11", "label": "includes", "to": "46", "width": 1}, {"from": "11", "label": "includes", "to": "47", "width": 1}, {"from": "11", "label": "includes", "to": "48", "width": 1}, {"from": "21", "label": "is", "to": "22", "width": 1}, {"from": "21", "label": "produces", "to": "23", "width": 1}, {"from": "21", "label": "used to calculate", "to": "24", "width": 1}, {"from": "21", "label": "much as", "to": "25", "width": 1}, {"from": "21", "label": "observed at", "to": "26", "width": 1}, {"from": "21", "label": "determinants are", "to": "32", "width": 1}, {"from": "32", "label": "includes", "to": "33", "width": 1}, {"from": "33", "label": "affects", "to": "34", "width": 1}, {"from": "33", "label": "affects", "to": "35", "width": 1}, {"from": "33", "label": "includes", "to": "36", "width": 1}, {"from": "33", "label": "includes", "to": "37", "width": 1}, {"from": "33", "label": "includes", "to": "38", "width": 1}, {"from": "33", "label": "includes", "to": "39", "width": 1}, {"from": "49", "label": "includes", "to": "50", "width": 1}, {"from": "49", "label": "includes", "to": "51", "width": 1}, {"from": "49", "label": "includes", "to": "52", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"shape": "dot", "size": 25, "font": {"size": 14, "face": "arial", "strokeWidth": 2, "strokeColor": "#ffffff", "color": "#000000"}, "color": {"border": "#2B7CE9", "background": "#97C2FC"}}, "edges": {"color": "#848484", "width": 2, "font": {"size": 12, "face": "arial", "strokeWidth": 0, "align": "middle", "color": "#000000"}, "smooth": {"type": "continuous", "forceDirection": "none"}}, "physics": {"stabilization": {"iterations": 100}, "barnesHut": {"gravitationalConstant": -10000, "springConstant": 0.002}}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

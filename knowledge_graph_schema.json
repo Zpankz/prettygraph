@@ -1,0 +1,63 @@
+{
+  "name": "knowledge_graph",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "nodes": {
+        "type": "array",
+        "description": "A collection of nodes, each representing an entity identified in the input.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier for the node."
+            },
+            "label": {
+              "type": "string",
+              "description": "Label for the node, derived from the input."
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "edges": {
+        "type": "array",
+        "description": "A collection of edges, each representing a relationship between nodes.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "The id of the source node."
+            },
+            "target": {
+              "type": "string",
+              "description": "The id of the target node."
+            },
+            "label": {
+              "type": "string",
+              "description": "Label for the edge, derived from the input."
+            }
+          },
+          "required": [
+            "source",
+            "target",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "additionalProperties": false
+  },
+  "strict": true
+}

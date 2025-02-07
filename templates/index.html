@@ -3,130 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text to Graph</title>
-    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <title>Graph Visualization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/force-graph"></script>
     <style>
-        #container {
-            display: flex;
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            overflow: hidden;
+        }
+        #graph {
+            width: 100vw;
             height: 100vh;
+            background-color: var(--background-color);
+        }
+        #textbox-container {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            width: 400px;
+            height: calc(100vh - 80px);
+            background-color: white;
+            color: black;
+            padding: 20px;
+            box-sizing: border-box;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out, background-color 0.3s, color 0.3s;
+            z-index: 1000;
+            border: 1px solid #ddd;
+            resize: horizontal;
+            overflow-x: hidden;
+        }
+        body.dark-theme #textbox-container {
+            background-color: #000000;
+            color: white;
+            border-color: #333;
+        }
+        #textbox-container.show {
+            transform: translateX(0);
+        }
+        #textbox-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 100%;
+            cursor: ew-resize;
+            background-color: #ddd;
+        }
+        body.dark-theme #textbox-container::after {
+            background-color: #333;
         }
         #textbox {
-            flex: 1;
-            padding: 10px;
-            font-size: 40px;
-            border: 1px solid #ccc;
-            overflow: auto;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
             white-space: pre-wrap;
+            background: transparent;
+            color: inherit;
+            border: none;
             outline: none;
+            padding-right: 10px;
         }
-        #cy {
-            flex: 1;
-            border-left: 1px solid #ccc;
+        .control-button {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+            z-index: 1001;
+        }
+        .control-button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        #toggle-textbox {
+            top: 20px;
+            left: 20px;
+        }
+        #theme-button {
+            top: 20px;
+            left: 70px;
+        }
+        #nodeMenu {
+            position: fixed;
+            display: none;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 5px;
+            z-index: 1002;
+        }
+        body.dark-theme #nodeMenu {
+            background: #2d2d2d;
+            border-color: #444;
+            color: #ffffff;
+        }
+        body.dark-theme button {
+            background: #444;
+            color: #ffffff;
+            border: 1px solid #666;
+        }
+        body.dark-theme button:hover {
+            background: #555;
+        }
+        body.dark-theme {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .highlighted {
+            background-color: rgba(255, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        body.dark-theme .highlighted {
+            background-color: rgba(255, 0, 0, 0.3);
         }
     </style>
 </head>
 <body>
-    <div id="container">
+    <div id="graph"></div>
+    <button id="toggle-textbox" class="control-button" title="Toggle Document">
+        <i class="fas fa-file-alt"></i>
+    </button>
+    <button id="theme-button" class="control-button" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+    </button>
+    <div id="textbox-container">
         <div id="textbox" contenteditable="true"></div>
-        <div id="cy"></div>
+    </div>
+    <div id="nodeMenu">
+        <button id="expandNode">Expand Node</button>
+        <button id="collapseNode">Collapse Node</button>
+        <button id="focusNode">Focus Node</button>
     </div>
     <script>
-        var colors = [
-            "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF",
-            "#B5EAD7", "#ECC5FB", "#FFC3A0", "#FF9AA2", "#FFDAC1",
-            "#E2F0CB", "#B5EAD7", "#C7CEEA", "#FFB7B2", "#FF9AA2",
-            "#FFDAC1", "#C7CEEA", "#FFB3BA", "#FFDFBA", "#FFFFBA",
-            "#BAFFC9", "#BAE1FF", "#FFC3A0", "#FF9AA2", "#FFDAC1",
-            "#E2F0CB", "#B5EAD7", "#C7CEEA", "#FFB7B2", "#FF9AA2",
-            "#FFDAC1", "#C7CEEA", "#FFB3BA", "#FFDFBA", "#FFFFBA",
-            "#BAFFC9", "#BAE1FF", "#FFC3A0", "#FF9AA2", "#FFDAC1",
-            "#E2F0CB", "#B5EAD7", "#C7CEEA", "#FFB7B2", "#FF9AA2",
-            "#FFDAC1", "#C7CEEA", "#FFB3BA", "#FFDFBA", "#FFFFBA",
-            "#BAFFC9", "#BAE1FF", "#FFC3A0", "#FF9AA2", "#FFDAC1"
+        let Graph = null;
+        let highlightNodes = new Set();
+        let highlightLinks = new Set();
+        let hoverNode = null;
+        let selectedNode = null;
+        let multiSelectedNodes = new Set();
+        let isDarkMode = true;
+
+        const colors = [
+            "#FF00FF", "#00FF00", "#FF0000", "#00FFFF", "#FF1493",
+            "#7FFF00", "#FF69B4", "#39FF14", "#FF4D00", "#00BFFF",
+            "#FF3131", "#40E0D0", "#FF1E8E", "#32CD32", "#FF0080",
+            "#00FF7F", "#FF2400", "#00F5FF", "#FF00BF", "#7CFF01",
+            "#FF3399", "#00FFB3", "#FF2D00", "#00FFCC", "#FF1493",
+            "#39FF14", "#FF0066", "#00FFE5", "#FF4000", "#00FFFF"
         ];
 
-        var colorIndex = 0;
+        let colorIndex = 0;
 
-        var cy = cytoscape({
-            container: document.getElementById('cy'),
-            elements: [],
-            style: [
-                {
-                    selector: 'node',
-                    style: {
-                        'background-color': 'data(color)',
-                        'label': 'data(label)',
-                        'color': '#000'
+        function updateThemeButton() {
+            const themeButton = document.getElementById('theme-button');
+            const icon = themeButton.querySelector('i');
+            if (isDarkMode) {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        function updateTheme() {
+            document.body.classList.toggle('dark-theme', isDarkMode);
+            if (Graph) {
+                Graph.backgroundColor(isDarkMode ? '#000000' : '#ffffff');
+            }
+            updateThemeButton();
+        }
+
+        function initGraph(graphData) {
+            const elem = document.getElementById('graph');
+            if (!elem) return null;
+
+            const graph = ForceGraph()(elem)
+                .width(elem.clientWidth)
+                .height(elem.clientHeight)
+                .backgroundColor(isDarkMode ? '#000000' : '#ffffff')
+                .graphData(graphData)
+                
+                .nodeId('id')
+                .nodeLabel('label')
+                .nodeVal(8)
+                .nodeRelSize(6)
+                .nodeColor(node => {
+                    if (multiSelectedNodes.has(node)) return '#ff0000';
+                    if (highlightNodes.has(node)) return node.color || '#ff0000';
+                    if (hoverNode === node) return '#ff00ff';
+                    return node.color || '#666666';
+                })
+                .nodeCanvasObject((node, ctx, globalScale) => {
+                    const size = 8;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
+                    
+                    if (node === hoverNode) {
+                        ctx.fillStyle = '#ff00ff';
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = node.color || '#666666';
                     }
-                },
-                {
-                    selector: 'edge',
-                    style: {
-                        'line-color': 'data(color)',
-                        'target-arrow-color': 'data(color)',
-                        'curve-style': 'bezier',
-                        'target-arrow-shape': 'triangle',
-                        'label': 'data(label)'
+                    
+                    ctx.fill();
+                    
+                    const label = node.label;
+                    const fontSize = 12/globalScale;
+                    ctx.font = `${fontSize}px Sans-Serif`;
+                    ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, node.x, node.y + size + fontSize/2);
+                })
+                
+                .linkColor(() => isDarkMode ? '#ffffff' : '#666666')
+                .linkWidth(2)
+                .linkDirectionalArrowLength(6)
+                .linkDirectionalArrowRelPos(1)
+                .linkCurvature(0.2)
+                .linkCanvasObjectMode(() => 'after')
+                .linkCanvasObject((link, ctx, globalScale) => {
+                    if (!link.label) return;
+                    const start = link.source;
+                    const end = link.target;
+                    const textPos = {
+                        x: start.x + (end.x - start.x) * 0.5,
+                        y: start.y + (end.y - start.y) * 0.5
+                    };
+                    const fontSize = 12/globalScale;
+                    ctx.font = `${fontSize}px Sans-Serif`;
+                    ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(link.label, textPos.x, textPos.y);
+                })
+                
+                .d3Force('link', d3.forceLink()
+                    .id(d => d.id)
+                    .distance(30)
+                    .strength(2)
+                )
+                .d3Force('charge', d3.forceManyBody()
+                    .strength(-50)
+                    .distanceMax(100)
+                    .theta(0.9)
+                )
+                .d3Force('center', d3.forceCenter()
+                    .strength(0.1)
+                )
+                .d3Force('collision', d3.forceCollide()
+                    .radius(12)
+                    .strength(0.7)
+                )
+                
+                .onNodeClick((node, event) => {
+                    if (!node) return;
+                    
+                    if (event.shiftKey) {
+                        if (multiSelectedNodes.has(node)) {
+                            multiSelectedNodes.delete(node);
+                        } else {
+                            multiSelectedNodes.add(node);
+                        }
+                    } else {
+                        multiSelectedNodes.clear();
+                        multiSelectedNodes.add(node);
+                        selectedNode = node;
+                        
+                        // Add clicked node and its connections to highlight sets
+                        highlightNodes.clear();
+                        highlightLinks.clear();
+                        highlightNodes.add(node);
+                        
+                        // Add connected nodes and links to highlights
+                        graph.graphData().links.forEach(link => {
+                            if (link.source === node || link.target === node) {
+                                highlightLinks.add(link);
+                                highlightNodes.add(link.source);
+                                highlightNodes.add(link.target);
+                            }
+                        });
+
+                        // Center and zoom on node, matching the example's approach
+                        graph.centerAt(node.x, node.y, 1000);
+                        graph.zoom(4, 2000);
+                    }
+                    
+                    highlightText(graphData);
+                    updateHighlight();
+                })
+                .onNodeRightClick((node, event) => {
+                    if (!node) return;
+                    event.preventDefault();
+                    const menu = document.getElementById('nodeMenu');
+                    if (!menu) return;
+                    menu.contextMenuNode = node;
+                    menu.style.display = 'block';
+                    menu.style.left = event.pageX + 'px';
+                    menu.style.top = event.pageY + 'px';
+                })
+                .onNodeDragEnd(node => {
+                    if (!node) return;
+                    node.fx = node.x;
+                    node.fy = node.y;
+                    updateHighlight();
+                })
+                .onNodeHover(node => {
+                    if ((!node && !highlightNodes.size) || (node && hoverNode === node)) return;
+                    
+                    hoverNode = node || null;
+                    highlightNodes.clear();
+                    highlightLinks.clear();
+                    
+                    if (node) {
+                        highlightNodes.add(node);
+                        const links = graph.graphData().links;
+                        links.forEach(link => {
+                            if (link.source === node || link.target === node) {
+                                highlightLinks.add(link);
+                                highlightNodes.add(link.source);
+                                highlightNodes.add(link.target);
+                            }
+                        });
+                    }
+                    
+                    elem.style.cursor = node ? 'pointer' : null;
+                    updateHighlight();
+                    highlightText(graphData);
+                })
+                .onBackgroundClick(event => {
+                    if (!event.shiftKey) {
+                        multiSelectedNodes.clear();
+                        selectedNode = null;
+                        highlightNodes.clear();
+                        highlightLinks.clear();
+                        updateHighlight();
+                        highlightText(graphData);
+                    }
+                })
+                
+                .d3VelocityDecay(0.6)
+                .d3AlphaDecay(0.02)
+                .cooldownTicks(100)
+                .warmupTicks(50);
+
+            const positioning = d3.forceRadial(
+                100,
+                elem.clientWidth / 2,
+                elem.clientHeight / 2
+            ).strength(0.05);
+
+            graph.d3Force('positioning', positioning);
+
+            window.addEventListener('resize', () => {
+                if (!elem) return;
+                const rect = elem.getBoundingClientRect();
+                graph.width(rect.width);
+                graph.height(rect.height);
+            });
+
+            setTimeout(() => {
+                if (graph.graphData().nodes.length > 0) {
+                    graph.zoomToFit(400);
+                    graph._state.lastSetZoom = null;
+                }
+            }, 100);
+
+            return graph;
+        }
+
+        function updateHighlight() {
+            if (!Graph) return;
+            
+            // Update node colors
+            Graph.nodeColor(node => {
+                if (multiSelectedNodes.has(node)) return '#ff0000';
+                if (highlightNodes.has(node)) return node.color || '#ff0000';
+                if (hoverNode === node) return '#ff00ff';
+                return node.color || '#666666';
+            })
+            .linkColor(link => highlightLinks.has(link) ? '#ff0000' : isDarkMode ? '#ffffff' : '#666666')
+            .linkWidth(link => highlightLinks.has(link) ? 2 : 1);
+        }
+
+        function highlightText(data) {
+            if (!data || !data.nodes) return;
+            
+            const textbox = document.getElementById('textbox');
+            if (!textbox) return;
+            
+            let text = textbox.innerText;
+            textbox.innerHTML = text;
+            
+            data.nodes.forEach(node => {
+                if (multiSelectedNodes.has(node) || highlightNodes.has(node)) {
+                    const label = node.label;
+                    if (label) {
+                        const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(${escapedLabel})`, 'gi');
+                        text = text.replace(regex, '<span style="background-color: yellow; color: black;">$1</span>');
                     }
                 }
-            ],
-            layout: {
-                name: 'cose',
-                fit: true,
-                animate: true,
-                animationDuration: 1000,
-                animationEasing: 'ease-in-out'
-            }
-        });
+            });
+            
+            textbox.innerHTML = text;
+        }
 
-        document.getElementById('textbox').addEventListener('input', function(e) {
-            if (e.inputType === 'insertParagraph' || (e.inputType === 'insertText' && e.data && e.data.endsWith('.'))) {
-                console.log('start fetch')
-                fetch('/update_graph', {
+        async function updateGraph(textContent) {
+            if (!textContent) return;
+
+            try {
+                const response = await fetch('/update_graph', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({text: this.innerText})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    cy.elements().remove();
-                    // Assign colors to nodes and edges
-                    data.nodes.forEach(node => {
-                        node.data.color = colors[colorIndex % colors.length];
-                        colorIndex++;
-                    });
-                    data.edges.forEach(edge => {
-                        edge.data.color = colors[colorIndex % colors.length];
-                        colorIndex++;
-                    });
-                    cy.add(data);
-                    cy.layout({ name: 'grid' }).run();
-                    highlightText(data);
+                    body: JSON.stringify({ text: textContent }),
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const graphData = await response.json();
+                
+                if (!graphData || !graphData.nodes || !graphData.links) {
+                    console.error('Invalid graph data received:', graphData);
+                    return;
+                }
+
+                if (!Graph) {
+                    Graph = initGraph(graphData);
+                } else {
+                    Graph.graphData(graphData);
+                }
+
+                highlightNodes.clear();
+                highlightLinks.clear();
+                multiSelectedNodes.clear();
+                selectedNode = null;
+                hoverNode = null;
+
+                Graph.width(document.getElementById('graph').clientWidth);
+                Graph.height(document.getElementById('graph').clientHeight);
+                
+                setTimeout(() => {
+                    if (Graph && Graph.zoomToFit) {
+                        Graph.zoomToFit(400);
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        document.getElementById('theme-button').addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            updateTheme();
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            isDarkMode = e.matches;
+            updateTheme();
+        });
+
+        const textboxContainer = document.getElementById('textbox-container');
+        const toggleButton = document.getElementById('toggle-textbox');
+        
+        toggleButton.addEventListener('click', () => {
+            textboxContainer.classList.toggle('show');
+            // Trigger a resize event to update the graph layout
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        document.getElementById('textbox')?.addEventListener('input', function(e) {
+            if (e.inputType === 'insertParagraph' || 
+                (e.inputType === 'insertText' && e.data && e.data.endsWith('.'))) {
+                updateGraph(this.innerText);
             }
         });
 
-        function highlightText(data) {
-            var textContent = document.getElementById('textbox').innerText;
-            // Highlight node labels
-            data.nodes.forEach(node => {
-                const label = node.data.label;
-                const color = node.data.color; // get color from node data
-                const regex = new RegExp(`\\b${label}\\b`, 'gi');
-                textContent = textContent.replace(regex, `<span style="background-color: ${color}; color: black;">${label}</span>`);
+        document.getElementById('expandNode')?.addEventListener('click', function() {
+            const menu = document.getElementById('nodeMenu');
+            if (menu?.contextMenuNode) {
+                // Here you would implement the node expansion logic
+            }
+            menu.style.display = 'none';
+        });
+
+        document.getElementById('collapseNode')?.addEventListener('click', function() {
+            const menu = document.getElementById('nodeMenu');
+            if (!menu || !menu.contextMenuNode) return;
+            
+            const node = menu.contextMenuNode;
+            if (!Graph || !node) return;
+
+            const links = Graph.graphData().links;
+            const connectedNodeIds = new Set();
+            
+            links.forEach(link => {
+                if (link.source.id === node.id) {
+                    connectedNodeIds.add(link.target.id);
+                } else if (link.target.id === node.id) {
+                    connectedNodeIds.add(link.source.id);
+                }
             });
-            // Highlight edge labels
-            data.edges.forEach(edge => {
-                const label = edge.data.label;
-                const color = edge.data.color; // get color from edge data
-                const regex = new RegExp(`\\b${label}\\b`, 'gi');
-                textContent = textContent.replace(regex, `<span style="background-color: ${color}; color: black;">${label}</span>`);
+
+            const currentData = Graph.graphData();
+            const newNodes = currentData.nodes.filter(n => 
+                n.id === node.id || !connectedNodeIds.has(n.id)
+            );
+            const newLinks = currentData.links.filter(link =>
+                !connectedNodeIds.has(link.source.id) && !connectedNodeIds.has(link.target.id)
+            );
+
+            Graph.graphData({
+                nodes: newNodes,
+                links: newLinks
             });
-            document.getElementById('textbox').innerHTML = textContent;
-        }
-  
+
+            menu.style.display = 'none';
+        });
+
+        document.getElementById('focusNode')?.addEventListener('click', function() {
+            const menu = document.getElementById('nodeMenu');
+            if (menu?.contextMenuNode && Graph) {
+                const node = menu.contextMenuNode;
+                Graph.centerAt(node.x, node.y, 1000);
+            }
+            menu.style.display = 'none';
+        });
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('nodeMenu');
+            if (!menu) return;
+            
+            if (!menu.contains(e.target) && e.target.id !== 'nodeMenu') {
+                menu.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('contextmenu', function(e) {
+            const menu = document.getElementById('nodeMenu');
+            if (!menu) return;
+            
+            if (menu.style.display === 'block') {
+                e.preventDefault();
+            }
+        });
+
+        document.body.classList.toggle('dark-theme', isDarkMode);
     </script>
 </body>
 </html>
